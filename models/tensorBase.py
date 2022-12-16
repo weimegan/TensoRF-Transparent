@@ -4,7 +4,15 @@ import torch.nn.functional as F
 from .sh import eval_sh_bases
 import numpy as np
 import time
+import matplotlib.pyplot as plt
 
+def dot_features_patch(selected_feats, feats, h, w):
+    patch = torch.mean(selected_feats[h-2:h+2, w-2:w+2, :], dim=(0,1)) #NOTE 4x4 patch
+    dot_out = torch.einsum("k,jk->j", patch, feats)
+    
+    plt.hist(dot_out.cpu())
+    plt.savefig('hist-feat-thresh.png') # Used to determine threshold
+    return dot_out
 
 def positional_encoding(positions, freqs):
     
@@ -58,15 +66,16 @@ class AlphaGridMask(torch.nn.Module):
 
 
 class MLPRender_Fea(torch.nn.Module):
-    def __init__(self,inChanel, viewpe=6, feape=6, featureC=128):
+    def __init__(self,inChanel, viewpe=6, feape=6, featureC=128, color=3):
         super(MLPRender_Fea, self).__init__()
 
         self.in_mlpC = 2*viewpe*3 + 2*feape*inChanel + 3 + inChanel
         self.viewpe = viewpe
         self.feape = feape
+        self.color = color
         layer1 = torch.nn.Linear(self.in_mlpC, featureC)
         layer2 = torch.nn.Linear(featureC, featureC)
-        layer3 = torch.nn.Linear(featureC,3)
+        layer3 = torch.nn.Linear(featureC, self.color)
 
         self.mlp = torch.nn.Sequential(layer1, torch.nn.ReLU(inplace=True), layer2, torch.nn.ReLU(inplace=True), layer3)
         torch.nn.init.constant_(self.mlp[-1].bias, 0)
@@ -84,15 +93,16 @@ class MLPRender_Fea(torch.nn.Module):
         return rgb
 
 class MLPRender_PE(torch.nn.Module):
-    def __init__(self,inChanel, viewpe=6, pospe=6, featureC=128):
+    def __init__(self,inChanel, viewpe=6, pospe=6, featureC=128, color=3):
         super(MLPRender_PE, self).__init__()
 
         self.in_mlpC = (3+2*viewpe*3)+ (3+2*pospe*3)  + inChanel #
         self.viewpe = viewpe
         self.pospe = pospe
+        self.color = color
         layer1 = torch.nn.Linear(self.in_mlpC, featureC)
         layer2 = torch.nn.Linear(featureC, featureC)
-        layer3 = torch.nn.Linear(featureC,3)
+        layer3 = torch.nn.Linear(featureC, self.color)
 
         self.mlp = torch.nn.Sequential(layer1, torch.nn.ReLU(inplace=True), layer2, torch.nn.ReLU(inplace=True), layer3)
         torch.nn.init.constant_(self.mlp[-1].bias, 0)
@@ -110,15 +120,16 @@ class MLPRender_PE(torch.nn.Module):
         return rgb
 
 class MLPRender(torch.nn.Module):
-    def __init__(self,inChanel, viewpe=6, featureC=128):
+    def __init__(self,inChanel, viewpe=6, featureC=128, color=3):
         super(MLPRender, self).__init__()
 
         self.in_mlpC = (3+2*viewpe*3) + inChanel
         self.viewpe = viewpe
+        self.color = color
         
         layer1 = torch.nn.Linear(self.in_mlpC, featureC)
         layer2 = torch.nn.Linear(featureC, featureC)
-        layer3 = torch.nn.Linear(featureC,3)
+        layer3 = torch.nn.Linear(featureC, self.color)
 
         self.mlp = torch.nn.Sequential(layer1, torch.nn.ReLU(inplace=True), layer2, torch.nn.ReLU(inplace=True), layer3)
         torch.nn.init.constant_(self.mlp[-1].bias, 0)
@@ -140,7 +151,7 @@ class TensorBase(torch.nn.Module):
                     shadingMode = 'MLP_PE', alphaMask = None, near_far=[2.0,6.0],
                     density_shift = -10, alphaMask_thres=0.001, distance_scale=25, rayMarch_weight_thres=0.0001,
                     pos_pe = 6, view_pe = 6, fea_pe = 6, featureC=128, step_ratio=2.0,
-                    fea2denseAct = 'softplus'):
+                    fea2denseAct = 'softplus', color=3, feat_field=None, query_features=None):
         super(TensorBase, self).__init__()
 
         self.density_n_comp = density_n_comp
@@ -149,6 +160,7 @@ class TensorBase(torch.nn.Module):
         self.aabb = aabb
         self.alphaMask = alphaMask
         self.device=device
+        self.color = color
 
         self.density_shift = density_shift
         self.alphaMask_thres = alphaMask_thres
@@ -170,15 +182,21 @@ class TensorBase(torch.nn.Module):
         self.init_svd_volume(gridSize[0], device)
 
         self.shadingMode, self.pos_pe, self.view_pe, self.fea_pe, self.featureC = shadingMode, pos_pe, view_pe, fea_pe, featureC
-        self.init_render_func(shadingMode, pos_pe, view_pe, fea_pe, featureC, device)
+        self.init_render_func(shadingMode, pos_pe, view_pe, fea_pe, featureC, device, color)
 
-    def init_render_func(self, shadingMode, pos_pe, view_pe, fea_pe, featureC, device):
+        self.query_features = query_features
+        # self.positive_ids = [0]
+        # self.score_threshold = None
+
+        self.feat_field = feat_field
+
+    def init_render_func(self, shadingMode, pos_pe, view_pe, fea_pe, featureC, device, color):
         if shadingMode == 'MLP_PE':
-            self.renderModule = MLPRender_PE(self.app_dim, view_pe, pos_pe, featureC).to(device)
+            self.renderModule = MLPRender_PE(self.app_dim, view_pe, pos_pe, featureC, color).to(device)
         elif shadingMode == 'MLP_Fea':
-            self.renderModule = MLPRender_Fea(self.app_dim, view_pe, fea_pe, featureC).to(device)
+            self.renderModule = MLPRender_Fea(self.app_dim, view_pe, fea_pe, featureC, color).to(device)
         elif shadingMode == 'MLP':
-            self.renderModule = MLPRender(self.app_dim, view_pe, featureC).to(device)
+            self.renderModule = MLPRender(self.app_dim, view_pe, featureC, color).to(device)
         elif shadingMode == 'SH':
             self.renderModule = SHRender
         elif shadingMode == 'RGB':
@@ -430,7 +448,7 @@ class TensorBase(torch.nn.Module):
 
 
         sigma = torch.zeros(xyz_sampled.shape[:-1], device=xyz_sampled.device)
-        rgb = torch.zeros((*xyz_sampled.shape[:2], 3), device=xyz_sampled.device)
+        rgb = torch.zeros((*xyz_sampled.shape[:2], self.color), device=xyz_sampled.device)
 
         if ray_valid.any():
             xyz_sampled = self.normalize_coord(xyz_sampled)
@@ -448,6 +466,17 @@ class TensorBase(torch.nn.Module):
             app_features = self.compute_appfeature(xyz_sampled[app_mask])
             valid_rgbs = self.renderModule(xyz_sampled[app_mask], viewdirs[app_mask], app_features)
             rgb[app_mask] = valid_rgbs
+
+            feat_rgbs = self.feat_field.renderModule(xyz_sampled[app_mask], viewdirs[app_mask], app_features)
+            patch = self.feat_field.query_features
+            dot_out = dot_features_patch(patch, feat_rgbs, patch.shape[0]//2, patch.shape[1]//2)
+            rgb[app_mask] = valid_rgbs
+
+            # NOTE find threshold from the histogram
+            thresh = -0.5
+            cond = (dot_out > thresh)
+            condition = torch.where(cond, weight[app_mask], torch.zeros(1, device=self.device)) # select weights according to threshold
+            weight[app_mask] = condition.to(self.device)
 
         acc_map = torch.sum(weight, -1)
         rgb_map = torch.sum(weight[..., None] * rgb, -2)

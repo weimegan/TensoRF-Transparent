@@ -45,11 +45,11 @@ def evaluation(test_dataset,tensorf, args, renderer, savePath=None, N_vis=5, prt
                                         ndc_ray=ndc_ray, white_bg = white_bg, device=device)
         rgb_map = rgb_map.clamp(0.0, 1.0)
 
-        rgb_map, depth_map = rgb_map.reshape(H, W, 3).cpu(), depth_map.reshape(H, W).cpu()
-
-        depth_map, _ = visualize_depth_numpy(depth_map.numpy(),near_far)
+        rgb_map, depth_map = rgb_map.reshape(H, W, tensorf.color).cpu(), depth_map.reshape(H, W).cpu()
+        if tensorf.color == 3:
+            depth_map, _ = visualize_depth_numpy(depth_map.numpy(),near_far)
         if len(test_dataset.all_rgbs):
-            gt_rgb = test_dataset.all_rgbs[idxs[idx]].view(H, W, 3)
+            gt_rgb = test_dataset.all_rgbs[idxs[idx]].view(H, W, tensorf.color)
             loss = torch.mean((rgb_map - gt_rgb) ** 2)
             PSNRs.append(-10.0 * np.log(loss.item()) / np.log(10.0))
 
@@ -66,12 +66,15 @@ def evaluation(test_dataset,tensorf, args, renderer, savePath=None, N_vis=5, prt
         rgb_maps.append(rgb_map)
         depth_maps.append(depth_map)
         if savePath is not None:
-            imageio.imwrite(f'{savePath}/{prtx}{idx:03d}.png', rgb_map)
-            rgb_map = np.concatenate((rgb_map, depth_map), axis=1)
-            imageio.imwrite(f'{savePath}/rgbd/{prtx}{idx:03d}.png', rgb_map)
-
-    imageio.mimwrite(f'{savePath}/{prtx}video.mp4', np.stack(rgb_maps), fps=30, quality=10)
-    imageio.mimwrite(f'{savePath}/{prtx}depthvideo.mp4', np.stack(depth_maps), fps=30, quality=10)
+            if tensorf.color == 3:
+                imageio.imwrite(f'{savePath}/{prtx}{idx:03d}.png', rgb_map)
+                rgb_map = np.concatenate((rgb_map, depth_map), axis=1)
+                imageio.imwrite(f'{savePath}/rgbd/{prtx}{idx:03d}.png', rgb_map)
+            else:
+                torch.save(rgb_map, f'{savePath}/{prtx}{idx:03d}.pt')
+    if tensorf.color == 3:
+        imageio.mimwrite(f'{savePath}/{prtx}video.mp4', np.stack(rgb_maps), fps=30, quality=10)
+        imageio.mimwrite(f'{savePath}/{prtx}depthvideo.mp4', np.stack(depth_maps), fps=30, quality=10)
 
     if PSNRs:
         psnr = np.mean(np.asarray(PSNRs))
@@ -114,7 +117,7 @@ def evaluation_path(test_dataset,tensorf, c2ws, renderer, savePath=None, N_vis=5
                                         ndc_ray=ndc_ray, white_bg = white_bg, device=device)
         rgb_map = rgb_map.clamp(0.0, 1.0)
 
-        rgb_map, depth_map = rgb_map.reshape(H, W, 3).cpu(), depth_map.reshape(H, W).cpu()
+        rgb_map, depth_map = rgb_map.reshape(H, W, tensorf.color).cpu(), depth_map.reshape(H, W).cpu()
 
         depth_map, _ = visualize_depth_numpy(depth_map.numpy(),near_far)
 
@@ -123,12 +126,15 @@ def evaluation_path(test_dataset,tensorf, c2ws, renderer, savePath=None, N_vis=5
         rgb_maps.append(rgb_map)
         depth_maps.append(depth_map)
         if savePath is not None:
-            imageio.imwrite(f'{savePath}/{prtx}{idx:03d}.png', rgb_map)
-            rgb_map = np.concatenate((rgb_map, depth_map), axis=1)
-            imageio.imwrite(f'{savePath}/rgbd/{prtx}{idx:03d}.png', rgb_map)
-
-    imageio.mimwrite(f'{savePath}/{prtx}video.mp4', np.stack(rgb_maps), fps=30, quality=8)
-    imageio.mimwrite(f'{savePath}/{prtx}depthvideo.mp4', np.stack(depth_maps), fps=30, quality=8)
+            if tensorf.color == 3:
+                imageio.imwrite(f'{savePath}/{prtx}{idx:03d}.png', rgb_map)
+                rgb_map = np.concatenate((rgb_map, depth_map), axis=1)
+                imageio.imwrite(f'{savePath}/rgbd/{prtx}{idx:03d}.png', rgb_map)
+            else:
+                torch.save(rgb_map, f'{savePath}/{prtx}{idx:03d}.pt')
+    if tensorf.color == 3:
+        imageio.mimwrite(f'{savePath}/{prtx}video.mp4', np.stack(rgb_maps), fps=30, quality=8)
+        imageio.mimwrite(f'{savePath}/{prtx}depthvideo.mp4', np.stack(depth_maps), fps=30, quality=8)
 
     if PSNRs:
         psnr = np.mean(np.asarray(PSNRs))

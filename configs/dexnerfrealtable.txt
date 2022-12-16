@@ -1,7 +1,6 @@
-
-dataset_name = llff
-datadir = ./data/transparent
-expname =  tensorf_transparent_VM_20
+dataset_name = dexnerfrealtable
+datadir = ./data/transparent/dex_nerf_real_table/
+expname =  dexnerfrealtable
 basedir = ./log
 
 downsample_train = 4.0

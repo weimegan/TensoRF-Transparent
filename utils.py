@@ -94,7 +94,7 @@ def rgb_ssim(img0, img1, max_val,
              return_map=False):
     # Modified from https://github.com/google/mipnerf/blob/16e73dfdb52044dcceb47cda5243a686391a6e0f/internal/math.py#L58
     assert len(img0.shape) == 3
-    assert img0.shape[-1] == 3
+    assert img0.shape[-1] == 3 or img0.shape[-1] == 384
     assert img0.shape == img1.shape
 
     # Construct a 1D Gaussian blur filter.

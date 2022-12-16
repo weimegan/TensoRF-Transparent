@@ -67,6 +67,23 @@ def render_test(args):
     tensorf = eval(args.model_name)(**kwargs)
     tensorf.load(ckpt)
 
+    # add feature field MLP, if checkpoint specified
+    if args.feat_ckpt:
+        print("going to load feat_tensorf")
+        feat_ckpt = torch.load(args.feat_ckpt, map_location=device)
+        feat_kwargs = feat_ckpt['kwargs']
+        feat_kwargs.update({'device': device})
+        feat_kwargs.update({'color': 384})
+        feat_tensorf = eval(args.model_name)(**feat_kwargs)
+        feat_tensorf.color = 384
+        feat_tensorf.renderModule.color = 384
+        feat_tensorf.load(feat_ckpt)
+        if args.query == "flower": #TODO generalize this query to different datasets
+            descriptor_path = "data/descriptors/images_4"
+            desc_file = f'{descriptor_path}/image010.pt' # NOTE Setting to a fixed descriptor, change if using different dataset
+            feat_tensorf.query_features = torch.load(desc_file).to(device)
+        tensorf.feat_field = feat_tensorf
+
     logfolder = os.path.dirname(args.ckpt)
     if args.render_train:
         os.makedirs(f'{logfolder}/imgs_train_all', exist_ok=True)
@@ -135,7 +152,7 @@ def reconstruction(args):
         tensorf = eval(args.model_name)(aabb, reso_cur, device,
                     density_n_comp=n_lamb_sigma, appearance_n_comp=n_lamb_sh, app_dim=args.data_dim_color, near_far=near_far,
                     shadingMode=args.shadingMode, alphaMask_thres=args.alpha_mask_thre, density_shift=args.density_shift, distance_scale=args.distance_scale,
-                    pos_pe=args.pos_pe, view_pe=args.view_pe, fea_pe=args.fea_pe, featureC=args.featureC, step_ratio=args.step_ratio, fea2denseAct=args.fea2denseAct)
+                    pos_pe=args.pos_pe, view_pe=args.view_pe, fea_pe=args.fea_pe, featureC=args.featureC, step_ratio=args.step_ratio, fea2denseAct=args.fea2denseAct, color=384) # NOTE set to 384 since it's feature dims, change if different or change to 3 if using normal tensorf
 
 
     grad_vars = tensorf.get_optparam_groups(args.lr_init, args.lr_basis)

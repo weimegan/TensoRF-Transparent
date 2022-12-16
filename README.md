@@ -59,7 +59,7 @@ More options refer to the `opt.py`.
 ## Rendering
 
 ```
-python train.py --config configs/flower.txt --ckpt path/to/your/checkpoint --render_only 1 --render_test 1 
+python train.py --config configs/flower.txt --ckpt checkpoints/flower.th --feat_ckpt log/tensorf_flower_VM_features/tensorf_flower_VM_features.th --query flower --render_only 1 --render_test 1 
 ```
 
 You can just simply pass `--render_only 1` and `--ckpt path/to/your/checkpoint` to render images from a pre-trained

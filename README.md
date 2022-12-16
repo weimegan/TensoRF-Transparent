@@ -21,7 +21,11 @@ pip install tqdm scikit-image opencv-python configargparse lpips imageio-ffmpeg 
 * [KeyPose](https://sites.google.com/view/keypose/home)
 * [Dex-NeRF](https://sites.google.com/view/dex-nerf)
 
-
+# Extract DINO Features
+Use this implementation of [DINO ViT Feature Extractor](https://github.com/weimegan/dino-vit-features) to extract features from images. 
+```
+python extractor.py --image_path <image_path> --output_path <output_path> --is_dir=True --reshape=True
+```
 
 ## Quick Start
 The training script is in `train.py`, to train RETrO:

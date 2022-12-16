@@ -27,8 +27,8 @@ def config_parser(cmd=None):
     parser.add_argument("--n_iters", type=int, default=30000)
 
     parser.add_argument('--dataset_name', type=str, default='blender',
-                        choices=['blender', 'llff', 'nsvf', 'dtu','tankstemple', 'own_data'])
-
+                        choices=['blender', 'llff', 'nsvf', 'dtu','tankstemple', 'dexnerfrealtable', 'own_data', 'llff_features'])
+    parser.add_argument('--query', type=str, default='flower')
 
     # training options
     # learning rate
@@ -86,6 +86,8 @@ def config_parser(cmd=None):
 
     parser.add_argument("--ckpt", type=str, default=None,
                         help='specific weights npy file to reload for coarse network')
+    parser.add_argument("--feat_ckpt", type=str, default=None,
+                        help='checkpoint for features')
     parser.add_argument("--render_only", type=int, default=0)
     parser.add_argument("--render_test", type=int, default=0)
     parser.add_argument("--render_train", type=int, default=0)

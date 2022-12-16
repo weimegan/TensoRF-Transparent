@@ -1,42 +1,39 @@
-# TensoRF
-## [Project page](https://apchenstu.github.io/TensoRF/) |  [Paper](https://arxiv.org/abs/2203.09517)
-This repository contains a pytorch implementation for the paper: [TensoRF: Tensorial Radiance Fields](https://arxiv.org/abs/2203.09517). Our work present a novel approach to model and reconstruct radiance fields, which achieves super
-**fast** training process, **compact** memory footprint and **state-of-the-art** rendering quality.<br><br>
+# RETrO: Rendering and Extracting Transparent Objects using TensoRF and Feature Field Distillation
+## [Project page](https://megan-kate-anushka.github.io/) 
+This repository extends the work of [Decomposing NeRF for Editing via Feature Field Distillation](https://arxiv.org/abs/2205.15585) to render and extract features from 3D scenes that include transparent objects. We use
+[TensoRF: Tensorial Radiance Fields](https://arxiv.org/abs/2203.09517) instead of NeRF for faster scene rendering. We use feature field distillation to render specific features within a scene. 
 
-
-https://user-images.githubusercontent.com/16453770/158920837-3fafaa17-6ed9-4414-a0b1-a80dc9e10301.mp4
 ## Installation
 
 #### Tested on Ubuntu 20.04 + Pytorch 1.10.1 
 
 Install environment:
 ```
-conda create -n TensoRF python=3.8
-conda activate TensoRF
+conda create -n RETrO python=3.8
+conda activate RETrO
 pip install torch torchvision
 pip install tqdm scikit-image opencv-python configargparse lpips imageio-ffmpeg kornia lpips tensorboard
 ```
 
 
-## Dataset
+## Datasets
 * [Synthetic-NeRF](https://drive.google.com/drive/folders/128yBriW1IG_3NJ5Rp7APSTZsJqdJdfc1) 
-* [Synthetic-NSVF](https://dl.fbaipublicfiles.com/nsvf/dataset/Synthetic_NSVF.zip)
-* [Tanks&Temples](https://dl.fbaipublicfiles.com/nsvf/dataset/TanksAndTemple.zip)
-* [Forward-facing](https://drive.google.com/drive/folders/128yBriW1IG_3NJ5Rp7APSTZsJqdJdfc1)
+* [KeyPose](https://sites.google.com/view/keypose/home)
+* [Dex-NeRF](https://sites.google.com/view/dex-nerf)
 
 
 
 ## Quick Start
-The training script is in `train.py`, to train a TensoRF:
+The training script is in `train.py`, to train RETrO:
 
 ```
-python train.py --config configs/lego.txt
+python train.py --config configs/flower.txt
 ```
 
 
 we provide a few examples in the configuration folder, please note:
 
- `dataset_name`, choices = ['blender', 'llff', 'nsvf', 'tankstemple'];
+ `dataset_name`, choices = ['llff', 'dexnerfrealtable', 'llff_features'];
 
  `shadingMode`, choices = ['MLP_Fea', 'SH'];
 
@@ -62,7 +59,7 @@ More options refer to the `opt.py`.
 ## Rendering
 
 ```
-python train.py --config configs/lego.txt --ckpt path/to/your/checkpoint --render_only 1 --render_test 1 
+python train.py --config configs/flower.txt --ckpt path/to/your/checkpoint --render_only 1 --render_test 1 
 ```
 
 You can just simply pass `--render_only 1` and `--ckpt path/to/your/checkpoint` to render images from a pre-trained
@@ -72,7 +69,7 @@ The rendering results are located in your checkpoint folder.
 ## Extracting mesh
 You can also export the mesh by passing `--export_mesh 1`:
 ```
-python train.py --config configs/lego.txt --ckpt path/to/your/checkpoint --export_mesh 1
+python train.py --config configs/flower.txt --ckpt path/to/your/checkpoint --export_mesh 1
 ```
 Note: Please re-train the model and don't use the pretrained checkpoints provided by us for mesh extraction, 
 because some render parameters has changed.
@@ -86,12 +83,12 @@ We provide two options for training on your own image set:
     
 
 ## Citation
-If you find our code or paper helps, please consider citing:
+If you find our code helpful, please consider citing:
 ```
-@article{tensorf,
-  title={TensoRF: Tensorial Radiance Fields},
-  author={Chen, Anpei and Xu, Zexiang and Geiger, Andreas and Yu, Jingyi and Su, Hao},
-  journal={arXiv preprint arXiv:2203.09517},
+@misc{retro,
+  title={RETrO: Rendering and Extracting Transparent Objects using TensoRF and Feature Field Distillation},
+  author={Wei, Megan and Xu, Katherine and Ray, Anushka},
+  journal={Github repository},
   year={2022}
 }
 ```
